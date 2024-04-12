@@ -43,7 +43,6 @@ export class PaypalService {
 
     const dataAPI: IPaypalAccesToken = await response.json() as IPaypalAccesToken
 
-    console.log(dataAPI)
     return dataAPI
 
   }
@@ -82,7 +81,6 @@ export class PaypalService {
       const dataAPI = await response.json()
 
 
-      console.log(dataAPI)
       return dataAPI
     } catch (error) {
       console.error(error)

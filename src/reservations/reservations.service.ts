@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Reservation } from './entities/reservation.entity';
 import { LessThanOrEqual, MoreThanOrEqual, Repository } from 'typeorm';
 import { BedroomsService } from 'src/bedrooms/bedrooms.service';
+import { EmailService } from 'src/email/email.service';
 
 
 @Injectable()
@@ -11,7 +12,8 @@ export class ReservationsService {
   constructor(
     @InjectRepository(Reservation)
     private reservationsRepository: Repository<Reservation>,
-    private bedroomsService: BedroomsService
+    private bedroomsService: BedroomsService,
+    private emailService: EmailService
   ) { }
   async create(createReservationDto: CreateReservationDto) {
 
@@ -24,12 +26,54 @@ export class ReservationsService {
       check_out_date: createReservationDto.check_out_date
     })
 
-    const reservation = await this.reservationsRepository.save(reservationRef)
+    const reservationCreated = await this.reservationsRepository.save(reservationRef)
 
     await this.bedroomsService.setBusyBedroom({ id: bedroom.id })
 
-    return reservation
+    const reservation = await this.reservationsRepository.findOne({
+      select: {
+        id: true,
+        check_in_date: true,
+        check_out_date: true,
+        user: {
+          firstName: true,
+          lastName: true,
+          email: true,
+        },
+        bedroom: {
+          num_bedroom: true,
+          bedroomType: {
+            type: true,
+            price_for_one_night: true
+          }
+        }
+      },
+      where: {
+        id: reservationCreated.id
+      },
 
+      relations: {
+        bedroom: {
+          bedroomType: true
+        },
+        user: true,
+
+      }
+    })
+
+    await this.emailService.sendEmailTicket({
+      email: reservation.user.email,
+      firstName: reservation.user.firstName,
+      lastName: reservation.user.lastName,
+      check_in_date: reservation.check_in_date,
+      check_out_date: reservation.check_out_date,
+      idReservation: reservation.id,
+      num_bedroom: reservation.bedroom.num_bedroom,
+      price_for_one_night: reservation.bedroom.bedroomType.price_for_one_night,
+      typeBedroom: reservation.bedroom.bedroomType.type
+    })
+
+    return reservation
 
   }
 
