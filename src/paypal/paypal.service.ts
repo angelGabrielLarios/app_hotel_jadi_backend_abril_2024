@@ -84,6 +84,7 @@ export class PaypalService {
       return dataAPI
     } catch (error) {
       console.error(error)
+      
     }
   }
 
